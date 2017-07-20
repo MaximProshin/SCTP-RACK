@@ -1,2 +1,2 @@
-# SCTPRACK
-To work on SCTP RACK (Tail Loss Recovery) draft
+# SCTP-RACK
+To work on SCTP RACK (aka Tail Loss Recovery) draft
