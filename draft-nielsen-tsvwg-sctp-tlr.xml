@@ -5,7 +5,7 @@
 <!ENTITY rfc2119 PUBLIC "" "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
 <!ENTITY rfc4690 PUBLIC "" "http://xml.resource.org/public/rfc/bibxml/reference.RFC.4960.xml">
 ]>
-<rfc category="exp" docName="draft-nielsen-tsvwg-sctp-tlr-01.txt"
+<rfc category="exp" docName="draft-nielsen-tsvwg-sctp-tlr-02.txt"
      ipr="trust200902">
   <?xml-stylesheet type='text/xsl' href='rfc2629.xslt' ?>
 
@@ -42,40 +42,120 @@
       </address>
     </author>
 
+    <author fullname="Rafaelle De Santis" initials="R.S" surname="De Santis">
+      <organization>Ericsson</organization>
+
+      <address>
+        <postal>
+          <street>xx</street>
+
+          <city>xx</city>
+
+          <region/>
+
+          <code>xx</code>
+
+          <country>Italy</country>
+        </postal>
+
+        <email>rafaele.de.santis@ericsson.com</email>
+      </address>
+    </author>
+
+ <author fullname="Anna Brunstrom" initials="A.B" surname="Brunstrom">
+      <organization>Karlstad University</organization>
+
+      <address>
+        <postal>
+          <street>Universitetsgatan 2</street>
+
+          <city>Karlstad</city>
+
+          <region/>
+
+          <code>651 88</code>
+
+          <country>Sweden</country>
+        </postal>
+
+        <email>anna.brunstrom@kau.se</email>
+      </address>
+    </author>
+
+ <author fullname="Michael Tuexen" initials="M.T" surname="Tuexen">
+      <organization>Muenster Univ. of Appl. Science</organization>
+
+      <address>
+        <postal>
+          <street>Stegerwaldstrasse 39</street>
+
+          <city>Steinfurt</city>
+
+          <region/>
+
+          <code>48565</code>
+
+          <country>Germany</country>
+        </postal>
+
+        <email>tuexen@fh-muenster.de</email>
+      </address>
+    </author>
+
+<author fullname="Randall Stewart" initials="R.S" surname="Stewart">
+      <organization>Netflix, Inc.</organization>
+
+      <address>
+        <postal>
+          <street>xx</street>
+
+          <city>Chapin</city>
+
+          <region/>
+
+          <code>29036 SC</code>
+
+          <country>United States</country>
+        </postal>
+
+        <email>randall@lakerest.net</email>
+      </address>
+    </author>
+
+
     <date/>
 
     <abstract>
       <t>Loss Recovery by means of T3-Retransmission has significant
       detrimental impact on the delays experienced through an SCTP
       association. The throughput achievable over an SCTP association also is
-      negatively impacted by the occurence of T3-Retransmissions. Loss
-      Recovery by Fast Retransmission operation is in most situations superior
-      to T3-Retransmission from a latency and a throughput perspective. The
-      present SCTP Fast Recovery algorithms as specified by <xref
-      target="RFC4960"/> are not able to adequately or timely recover losses
-      in certain situations, thus resorting to loss recovery by lengthy
+      negatively impacted by the occurence of T3-Retransmissions. The present
+      SCTP Fast Recovery algorithms as specified by <xref target="RFC4960"/>
+      are not able to adequately or timely recover losses in certain
+      situations, thus resorting to loss recovery by lengthy
       T3-Retransimissions or by non-timely activation of Fast Recovery. In
-      this document we propose for a number of enhancements to the SCTP Loss
-      Recovery algorithms aimed to amend some of these deficiencies with a
+      this document we specify a number of enhancements to the SCTP Loss
+      Recovery algorithms which amends some of these deficiencies with a
       particular focus on Loss Recovery for drops in Traffic Tails. The
       enhancements supplement the existing algorithms of <xref
       target="RFC4960"/> with proactive probing and timer driven activation of
       the Fast Retransmission algorithm as well as a number of enhancements of
-      the Fast Retransmission algorithm in itself are proposed. The
+      the Fast Retransmission algorithm in itself are specified. The
       enhancement are proposed as supplements to the Loss Recovery algorithms
       of <xref target="RFC4960"/> and as such they do not deprecate or replace
       any of the mechanisms defined by <xref target="RFC4960"/>.</t>
 
-      <t>The solution proposed draws on prior art in the area of SCTP and TCP
-      Loss Recovery improvements. The mechanisms proposed include the
+      <t>The solution defined draws on prior art in the area of SCTP and TCP
+      Loss Recovery improvements. The mechanisms include the
       adjustment to SCTP Fast Retransmission of certain improvements specified
       for TCP Fast Retransmission by <xref target="RFC6675"/> as well as the
-      proposal embeds SCTP Early Retransmit <xref target="RFC5827"/> in a
-      delayed variant. The proposal heavily draws on the ideas put forward for
+      solution embeds SCTP Early Retransmit <xref target="RFC5827"/> in a
+      delayed variant. The solution heavily draws on the ideas put forward for
       TCP by <xref target="DUKKIPATI01"/> for proactive probing and timer
-      driven entering of Fast Recovery. The proposal embeds certain aspects
-      from <xref target="HURTIG"/> when applicable. The procedures proposed
-      are sender-side only and do not impact the SCTP receiver.</t>
+      driven entering of Fast Recovery. The solution embeds aspects from <xref
+      target="HURTIG"/> and <xref target="Rajiullah"/> for timer restart
+      management where applicable. The procedures defined are in their core sender-side only and may operate
+      with no impact on the SCTP receiver. Certain optimizations within the solution are only possibly towards SCTP receivers supporting certain SCTP extensions.</t>
     </abstract>
   </front>
 
@@ -83,36 +163,35 @@
     <section title="Introduction">
       <t>Loss Recovery by means of T3-Retransmission has significant impact on
       the delays experienced through, as well as, the throughput achievable
-      over an SCTP association. Loss Recovery by Fast Retransmission (FR)
-      operation in most situations is superior to T3-Retransmission from both
+      over an SCTP association. Loss Recovery by Fast Retransmission
+      operation in many situations is superior to T3-Retransmission from both
       a latency and a throughput perspective.</t>
 
       <t>The present SCTP Fast Retransmission algorithm, as specified by <xref
-      target="RFC4960"/>, is driven uniquely by exceed of a duptresh number of
+      target="RFC4960"/>, is driven uniquely by exceed of a DupTresh number of
       mis indication counts stemming for returned SACKs, and it is as such not
       able to adequately or timely recover losses in traffic tails where a
       sufficient number of such SACKs may not be generated, there resorting to
-      loss recovery by T3-Retransimissions or by "non-timely" activation of
-      Fast Recovery.</t>
+      loss recovery by T3-Retransimissions or by non-timely activation of Fast
+      Recovery. Non-timely activation here refer to the situation where
+      activation of Fast Recovery for packets lost within one data burst needs
+      to await arrival of SACKs from a subsequent data burst.</t>
 
-      <t>By drop in traffic tails we refer not only to "pure" tail drops,
-      i.e., drop of all packets in the end of the communication on an SCTP
-      association from a certain point onwards, but more generally and
+      <t>By drop in traffic tails (or tail drops) we refer generally and
       specifically to the following situations: <list style="numbers">
-          <t>Pure tail drops of the last SCTP packets of an SCTP association
+          <t>Drops of the last SCTP packets of an SCTP association
           or more generally drop of packets in the end of an SCTP association
-          which are not proceeded by more than dupthresh number of packets
-          which are not dropped. Drops of either type we will generally refer
-          to as Tail Drops.</t>
+          which are not proceeded by more than DupThresh number of packets
+          which are not dropped. </t>
 
-          <t>Tails Drops among packets sent in a the end of bursts spaced by
+          <t>Drops among packets sent in a the end of bursts spaced by
           pauses of time equal to or greater than the T3-timeout
           (approximately). It is noted that such bursts (pauses in between
           bursts) may result from application limitations, from congestion
           control limitations or from receiver side limitations.</t>
 
           <t>Drops among packets sent so sparsely that each dropped packet
-          constitutes a tail drop in that dupthresh number of packets would
+          constitutes a tail drop in that DupThresh number of packets would
           not be sent (would not be available for sent) prior to expiry of the
           T3-timeout.</t>
         </list></t>
@@ -122,16 +201,88 @@
       packets combined with drops of the returned SACKs may together result in
       that an insufficient number of SACKs be returned to traffic sender for
       that the Fast Retransmission algorithm be activated prior to T3-timeout
-      occurring. The tail traffic situations for which SCTP FR is not able to
+      occurring. The tail traffic situations for which SCTP Fast Retransmission is not able to
       recover the losses is thus in general broader than the exact situations
-      listed above. The improvements proposed includes enhancement of SCTP to
-      deduce the mis indication counts from an enhanced SACK scoreboard thus
+      listed above. The improvements specified include enhancement of SCTP to
+      deduce the mis indication counts from enhanced  scoreboard information thus
       removing some of the vulnerability of the present SCTP mis indication
       counting to loss of SACKs.</t>
 
-      <t>It is noted that the Early Retransmit algorithm, <xref
+     
+
+      <section title="The SCTP TLR Function">
+        <t>The function proposed for enhancements of the SCTP Loss Recovery
+        operation for Traffic Tail Losses is divided in two parts: <list
+            style="symbols">
+            <t>Enhancements of SCTP Fast Retransmisison (SCTP FR) algorithm by
+            means of the following Tail Loss Recovery
+            improving functions inspired by or specified by <xref
+            target="RFC6675"/> for TCP:<list style="symbols">
+                <t>Mis indication counting for a missing (non-SACK'ed) TSN
+                will be based on augmented scoreboard information such
+                that the mis indications will be based not on the number of
+                returned SACKs but on the number of SACK'ed SCTP packets
+                carrying data chunks of higher TSNs. The mechanism is
+                specified both in terms of packets, the book-keeping of which
+                requires new logic, as well as in terms of a less
+                implementation demanding byte based variant following the
+                Islost() approach of <xref target="RFC6675"/>. We shall refer
+                to this improvement as Extended Mis Indication Counting.</t>
+
+                <t>Fast Recovery operation is extended to include the "last
+                resort" retransmisssion, Nextseg 3) and Nextseg 4), operations
+                of <xref target="RFC6675"/>, thus supporting conditional
+                proactive fast retransmissions of missing, but not yet
+                classified as lost, TSNs within the Fast Recovery Exit
+                Point. </t>
+              </list></t>
+
+            <t>New SCTP Tail Loss Recovery State machine with proactive timer
+            driven activation of (the enhanced) Fast Recovery operation. Timer
+            driven activation of Fast Recovery is initiated for outstanding
+            data whenever a certain time, shorter then the T3 timeout, has
+            elapsed from the transmittal of the lowest outstanding TSN and
+            network responsiveness, in form of SACKs of packets ahead of the TSN, has been proven since
+            the transmittal of the lowest outstanding TSN. The SCTP TLR
+            mechanism implements a new timer, the Tail Loss Probe timer (PTO),
+            and it works in parts by: <list style="symbols">
+                <t>Forced activation of Fast Recovery when network
+                responsiveness has been proven, and the PTO timer has kicked,
+                since transmittal of the lowest outstanding TSN, but
+                additional trafic sent (SACKs of TSNs ahead of the TSN) has
+                not served to activate Fast Recovery based on the Extended
+                Mis Indication Counting.</t>
+
+                <t>Probing for network responsiveness, by transmittal of a TLR
+                probe packet, when no network responsiveness information (no SACKs have been
+                received for any packets ahead of line of the TSN) is available at
+                expiration of the PTO timer on the lowest outstanding TSN</t>
+
+                <t>Activation for T3-retransmission Loss Recovery only when
+                the network remains unresponsive (no SACKs are received) also after transmittal, and subsequently timeout, of a
+                TLR probe packet. </t>
+              </list></t>
+          </list></t>
+
+
+    <t>The SCTP TLR procedures proposed apply as add-on supplements to any
+        SCTP implementation based on <xref target="RFC4960"/>. The SCTP TLR procedures in their core 
+        are sender-side only and do not impact the SCTP receiver.</t>
+
+<t>Exploitation of SCTP immediate SACK feature, <xref target="RFC7053"/>,  and usage of
+        new umambiguous selective acknowledgement feature of SCTP require support in both sender and receiver of these SCTP extensions. </t>
+
+</section>
+
+      <section title="Relation to other work">
+
+
+
+      <section title="RTO Restart and Early Retransmit">
+
+ <t>It is noted that the Early Retransmit algorithm, <xref
       target="RFC5827"/>, addresses activation of Fast Recovery for a
-      particular subset of the above tail drop situations. The solution
+      particular subset of the tail drop situations in targert of the SCTP TLR function. The solution
       proposed embeds (as a special case) the Early Retransmits algorithm in
       the delayed variant, experienced with for TCP in <xref
       target="DUKKIPATI02"/> in which Early Retransmission is only activated
@@ -140,61 +291,12 @@
       caused by "mild" packet re-ordering as documented for TCP in <xref
       target="DUKKIPATI02"/>.</t>
 
-      <section title="SCTP TLR Function">
-        <t>The function proposed for enhancements of the SCTP Loss Recovery
-        operation for Traffic Tail Losses is divided in two parts: <list
-            style="symbols">
-            <t>Enhancements of SCTP Fast Retransmisison (SCTP FR) algorithm by
-            means of the introduction SCTP FR equivalents of the following
-            Tail Loss Recovery improving functions inspired by or specified by
-            <xref target="RFC6675"/> for TCP. <list style="symbols">
-                <t>Counting mis indications for a missing (non-SACK'ed) TSN
-                based on augmented SACK scoreboard information in which the
-                mis indications will be based on the number of SACK'ed SCTP
-                packets carrying data chunks of higher TSNs. The mechanism is
-                specified both in terms of packets, the book-keeping of which
-                requires new logic, as well as in terms of a less
-                implementation demanding byte based variant following the
-                Islost() approach of <xref target="RFC6675"/>. We shall refer
-                to this as Extended Mis Indication Counting.</t>
-
-                <t>The "last resort" retransmisssion, Nextseg 3) and Nextseg
-                4), operations of <xref target="RFC6675"/> supporting
-                conditional proactive fast retransmissions of missing TSNs
-                within the Fast Recovery Exit Point but not yet classified as
-                lost</t>
-              </list></t>
-
-            <t>New SCTP Tail Loss Recovery State machine with proactive timer
-            driven activation of (the enhanced) Fast Recovery operation
-            whenever network responsiveness (SACKs of packets) has been proven
-            within a certain time, shorter then the T3 timeout, from the
-            transmittal of the lowest outstanding TSN. The SCTP TLR mechanism
-            implements a new timer, the Tail Loss Probe timer (PTO), and it
-            works in parts by: <list style="symbols">
-                <t>forcing entering of Fast Recovery when network
-                responsiveness has been proven and the PTO timer has kicked,
-                but additional trafic sent (SACKs of additional traffic sent)
-                have not served to activate Fast Recovery based on the
-                (extended) mis indication counting.</t>
-
-                <t>probing, by transmittal of a TLR probe packet, for network
-                responsiveness, when no other information is available at kick
-                of the PTO timer (no packets have been received for any
-                packets in the traffic tail).</t>
-
-                <t>allowing for T3-retransmission Loss Recovery only when the
-                network remains unresponsive (no SACK received for any traffic
-                in the tail nor for the probe packet),</t>
-              </list></t>
-          </list></t>
-
-        <t>It is noted that depending on the exact situation (e.g., drop
+        <t>It is further noted that depending on the exact situation (e.g., drop
         pattern, congestion window and amount of data in flight) then
         T3-retransmission procedures need not be inferior to Fast
         Retransmission procedures. Rather in some situations T3-retransmission
         will indeed be superior as T3-retransmissions allow for ramp up of the
-        congestion window during the Recovery Process and as it, by its nature
+        congestion window during the recovery process and as it, by its nature
         of declaring all outstanding data as lost, never risks being blocked
         by congestion window limitations. The changes proposed in this
         document focus on improving the Loss Recovery operation of SCTP by
@@ -208,8 +310,10 @@
         ideas of <xref target="HURTIG"/> for accurate RTO restart are drawn on
         in the solution proposed here for accurate restart of the new tail
         loss probe timer (PTO-timer) as well as for accurate set of the
-        T3-timer under certain conditions thus harvesting some og the same
-        latency optimizations as <xref target="HURTIG"/>.</t>
+        T3-timer under certain conditions thus harvesting some of the same
+        latency optimizations as <xref target="HURTIG"/>. The same approach
+        has recently been exploited for TCP by the invention of the TLPR
+        function by the authors of <xref target="Rajiullah"/>.</t>
 
         <t>OPEN ISSUE: It is to be determined if <xref target="HURTIG"/>, or
         plain T3-retransmission of <xref target="RFC4960"/>, are opportune
@@ -223,27 +327,32 @@
         in certain situations. Yet another remedy may be to generally look to
         improve the CC operation of SCTP.</t>
 
-        <t>The SCTP TLR procedures proposed apply as add-on supplements to any
-        SCTP implementation based on <xref target="RFC4960"/>. The procedures
-        are sender-side only and do not impact the SCTP receiver.</t>
-      </section>
+    
+
+</section>
+     
 
       <section title="TCP applicability">
         <t>SCTP Loss Recovery operation in its core is based on the design of
         Loss Recovery for TCP with SACK enabled. The enhancements of SCTP Tail
-        Loss Recovery proposed here are readably applicable for TCP.</t>
+        Loss Recovery proposed here are applicable for TCP. </t>
+
+<t> Note:  The - to be determined - exploitation of SCTP immediate SACK feature, <xref target="RFC7053"/>,  and the - to be determined - usage of
+        new umambiguous selective acknowledgement feature of SCTP may not be readably applicable to TCP at present. ISSUE: Need to follow up on <xref
+        target="zimmermann02"/>,  <xref
+        target="zimmermann03"/>,  </t>
 
         <t>It is noted that while the SCTP TLR algorithms and SCTP TLR state
         machine defined is inspired by the timer driven tail loss probe
         approach specified in <xref target="DUKKIPATI01"/> for TCP, then the
         solution defined here differs in the approach taken. The approach here
         is a clean state approach defining a new comprehensive SCTP TLR
-        statemachine on top of (in addition to) the existing Fast Recovery and
-        T3-Recovery states covering all tails loss patterns, whereas the
-        approach of <xref target="DUKKIPATI01"/> relies on a number of
-        experimental mechanisms (<xref target="DUKKIPATI02"/>, <xref
-        target="MATHIS"/>, <xref target="RFC5827"/>) defined for TCP in IETF
-        or in Research with adhoc extension to support selected Tail loss
+        statemachine as an add-on to the (at least conceptually) existing Fast Recovery and T3-Recovery SCTP state machines of
+        SCTP. Thereby the SCTP TLR algorithm is able to address all tail loss
+        patterns, whereas the approach of <xref target="DUKKIPATI01"/> relies
+        on a number of experimental mechanisms (<xref target="DUKKIPATI02"/>,
+        <xref target="MATHIS"/>, <xref target="RFC5827"/>) defined for TCP in
+        IETF or in Research with adhoc extension to support selected tail loss
         patterns by addition of the tail loss probe mechanism and the
         therefrom driven activation of the mechanisms.</t>
       </section>
@@ -252,22 +361,34 @@
         <t>The solution proposed is an enhancement of the existing mis
         indication counting based Fast Recovery operation of SCTP, <xref
         target="RFC4960"/>, and as such the solution inherits the fundamental
-        vulnerability to packet re-ordering that the SCTP Fast Recovery
+        vulnerability to packet re-ordering that the SCTP Fast Retransmission
         algorithm of <xref target="RFC4960"/> embeds.</t>
 
-        <t>The solution does not increase the vulnerability of Loss Recovery
-        to packet-reordering as demonstrated by (to be filled in).</t>
+<t> For deployment of SCTP in environments where the Fast Retransmission
+        algorithm of <xref target="RFC4960"/> gives rise to spurious entering of Fast Recovery it would be relevant to look into remdies whihc may detect such and undo the effects of such. Possibly following the approaches taken for TCP (and SCTP) in this area. </t>
+
+        <t>OPEN ISSUE: In severe packet re-ordering situations where the second pacekt of two subsequently sent packets outrace the first packet in arrival with more than PTO time, then such may tricker the SCTP TLR function to enter spurious Fast Recovery. It is conjectured that the this situation does not significantly increase the vulnerability of
+        Loss Recovery to packet-reordering. To be determined and evaluated. 
+</t>
       </section>
 
+<section title="Spurious Retransmissions">
+
+<t> A significant number of spurious TLR probes have been observed in tests. It is to be determined if this is a fact of the function or whetehr it may be improved with adjustment of the PTO timer calculations.</t>
+
+</section>
+
+
       <section title="Congestion Control">
-        <t>It shall be noted that in its very nature of prompting for
+        <t>In its very nature of prompting for
         activation of Fast Recovery instead of T3-Recovery then the benefit of
         the solution proposed versus the existing solution of <xref
         target="RFC4960"/> will depend on the CC operation not only during the
         recovery process but also after exit of the recovery process. In this
         context it is noted that the prior approach taken for TCP, <xref
         target="DUKKIPATI01"/>, has been documented for a TCP implementation
-        running CUBIC, whereas SCTP runs a CC algorithm more similar to TCP
+        running CUBIC,  e.g., see <xref
+        target="zimmermann01"/>, whereas SCTP runs a CC algorithm more similar to TCP
         Reno CC as defined by <xref target="RFC5681"/>.</t>
 
         <t>The solution at present is defined within the constraints of
@@ -277,24 +398,41 @@
         functions deined here in particular.</t>
       </section>
     </section>
+ </section>
 
     <section title="Conventions and Terminology">
       <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
       "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
       document are to be interpreted as described in <xref
       target="RFC2119"/>.</t>
+
+   <t>For the purposes of explaining the SCTP TLR function, we use the following terms:
+</t>
+
+          <t><list style="empty">
+              <t>"DupThresh": The number of mis-indication counts on an outstanding TSN at the reach of which SCTP declares the TSN as lost and enters Fast Recovery for the TSN if not in Fast Recovery or T3-Recovery already.</t>
+
+<t>"Flightsize": At any given time we define the "flightsize" to be the number of bytes that a SCTP sender considers to be in flight in the network from the sender to the receiver. It is noted that the bytes of a message  which has been retransmitted will count either once or twice in the flightsize depending on whether SCTP considers the first transmission of the message as having been lost (dropped) in the network.</t>
+
+<t>"T3-Recovery": .</t>
+
+<t>"Scoreboard": .</t>
+
+            </list></t>
+
+
     </section>
 
     <section title="Description of Algorithms">
       <t/>
 
-      <section title="SCTP Scoreboard and Mis Indication Counting Enhancements">
+      <section title="SCTP Scoreboard and Mis Indication Counting Enhancement">
         <t/>
 
         <section title="Highest TSN Newly Acknowledged Extension">
           <t>Entering of Fast Recovery in SCTP, as specified by <xref
           target="RFC4960"/>), is driven by mis indication counts. When a TSN
-          has received dupthresh=3 mis indication counts, the TSN is declared
+          has received DupThresh=3 mis indication counts, the TSN is declared
           lost and will be eligible for fast retransmission via Fast Recovery
           procedure.</t>
 
@@ -314,9 +452,9 @@
           <t>An evident issue with the HTNA algorithm is that it is vulnerable
           to loss of SACKs. In many situations loss of SACKs will result only
           in a slight delayed entering of Fast Recovery for a dropped TSN, but
-          generally then by relying on HTNA algorithm only, loss of SACKs will
+          generally, then by relying on HTNA algorithm only, loss of SACKs will
           further broaden the trafic tails situations where Fast Recovery
-          either not be activated in a timely manner or will not be activated
+          either not be activated in a timely manner or not be activated
           at all due to the receipt of an insufficient number SACKs only.</t>
 
           <t>In order to make SCTP Fast Recovery more robust towards drop of
@@ -335,13 +473,16 @@
             </list></t>
 
           <t>The solution is robust towards split SACK. The solution requires
-          for the SCTP impementation to keep track of the relationship
+          for the SCTP implementation to keep track of the relationship
           inbetween chunks and packets. One solution is for the SCTP
-          implementation to maintain a monotonically incrementing packet
+          implementation to maintain a packet id as a monotonically incrementing packet
           seqence number to map chunks to packets and for each outstanding
           chunk to keep state of the packet id that the chunk was sent in as
-          well as (incrementally updated) the packet ids of up to dupthres-1
+          well as (incrementally updated) the packet ids of up to DupThresh-1
           (=2) packets ahead of line for which chunks have been SACKed.</t>
+
+<t> For accurate PTO-timer management, using the restart principles of <xref target="HURTIG"/> and <xref target="Rajiullah"/>,    see <xref
+      target="SCTP_TLR"/>, an SCTP TLR implementation is required to keep track of the time at which packets/TSNs are transmitted (or strictly speaking to be able to deduce the time since a packet/a TSN was transmitted). An implementation may exploit timestamps for the generation of (part of) the packet id as well as for the mentioned time management thereby limiting the additional overhead required for the packet id storage. </t>
 
           <t>As an alternative to the above accurate packet counting then an
           SCTP implementation MAY instead support the following bytes counting
@@ -354,30 +495,24 @@
               acknowledged DATA chunk is one not previously acknowledged in a
               SACK. For each missing TSN thus eligible for additional mis
               indication counts, the number of mis indications to be given
-              shall follow the number of newly acknowledge bytes in the SACK
+              shall follow the number of newly acknowledged bytes in the SACK
               ahead of line of the missing TSN in the following manner
-              Add-mis-indication-count(TSN) = mod_PMTU(Newly bytes ahead of
-              line(TSN))+1.</t>
+              Add-mis-indication-count(TSN) = Ceiling((Newly bytes ahead of
+              line(TSN))/PMTU). </t>
             </list></t>
 
-          <t>For both solutions (NAPhol, HBNA) then it is noted that an SCTP
-          implementation only need to keep count of the mis-indications up to
-          the dupthres=3 threshold level and equally well an implementation
-          need not track the exact number of packets ahead of line or the
-          exact number os bytes ahead of line of a certain missing TSN once
-          this number surpasses the dupthres=3 threshold.</t>
+          
 
-          <t>This last byte based approach follows the approach taken for TCP,
+          <t>The HBNA approach as specified above is vulnerable to split of SACK. An implementation choice which is robust to split of SACK is to recalculate the total amount of selectively acknowledged  bytes ahead of line of an outstanding TSN and update the mis-indication count of the TSN as Ceiling((Selectively Acked bytes ahead of line (TSN))/PMTU). </t>
+
+   <t> The HBNA approach follows the approach taken for TCP,
           Islost(), in <xref target="RFC6675"/>. It is noted, however, that
           due to the message based approach of SCTP, then a byte based
           approach generally will be less accurate as a measure for the number
           of packet received ahead of line than it is for byte stream based
           TCP.</t>
 
-          <t>OPEN ISSUE: Check alignment with algorthms defined in <xref
-          target="HURTIG"/>. If relevant align.</t>
-
-          <t/>
+         <t/>
         </section>
       </section>
 
@@ -386,10 +521,13 @@
         target="RFC6675"/> implements some differences compared to the fast
         retransmission algorithm specified for SCTP by <xref
         target="RFC4960"/>. Of particular significance for recovery of losses
-        in traffic tails scenarios are the fact that the <xref
+        in traffic tail
+
+ scenarios are the fact that the <xref
         target="RFC6675"/> algorithm, once Fast Recovery has been activated,
         takes two "last resort" retransmission measures, step 3) and step 4)
-        of Nextseg() of <xref target="RFC6675"/>, that faciliate the recovery
+        of Nextseg() of <xref target="RFC6675"/>. These measures 
+faciliate the recovery
         of losses in situations where only an insufficient number of SACKs
         would be able to be generated to complete the Fast Recovery process
         without resorting to T3-timeout. For SCTP Fast Recovery we formulate
@@ -399,18 +537,18 @@
             <t hangText="Last Resort Retransmission:">If the following
             conditions are met:<list style="symbols">
                 <t>there are no outstanding TSN's eligible for fast
-                retransmission due to dupthres or more mis indications</t>
+                retransmission due to DupThresh or more mis indications</t>
 
                 <t>there is no new data available for transmission</t>
               </list>then an outstanding TSN less than or equal to the Fast
             Recovery Exit Point, for which there exists SACKs of chunks ahead
             of line of the TSN, may be retransmitted provided the CWND allow.
             The bytes of a TSN which is retransmitted in this manner are not
-            subtracted from the flight size prior to this action be taken nor
+            subtracted from the flightsize prior to this action be taken nor
             as a result of this action. If the mis indication count of the TSN
-            subsequently reaches the dupthres value, the bytes of the TSN
-            shall be subtracted from the flight size. Once acknowledged the
-            remaining contribution of this TSN in the flight size (whether it
+            subsequently reaches the DupThresh value, the bytes of the TSN
+            shall be subtracted from the flightsize. Once acknowledged the
+            remaining contribution of this TSN in the flightsize (whether it
             be there counted once or twice at this point in time) is
             subtracted. A TSN which is retransmitted in this manner will be
             marked as ineligible for a subsequent fast retransmit.</t>
@@ -418,7 +556,7 @@
             <t hangText="Rescue:">If all of the following conditions are met:
             <list style="symbols">
                 <t>there are no outstanding TSN's eligible for fast
-                retransmission due to dupthres or more mis indications</t>
+                retransmission due to DupThresh or more mis indications</t>
 
                 <t>there is no new data available for transmission</t>
 
@@ -434,11 +572,11 @@
             retransmitted TSNs up to PMTU size, the highest TSN of which MUST
             be the highest outstanding TSN within the Fast Recovery Point. The
             bytes of a TSN which is retransmitted in this manner are not
-            subtracted from the flight size prior to this action be taken nor
+            subtracted from the flightsize prior to this action be taken nor
             as a result of this action. If the mis indication count of the TSN
-            subsequently reaches the dupthres value, the bytes of the TSN
-            shall be subtracted from the flight size. Once acknowledged the
-            remaining contribution of this TSN in the flight size (whether it
+            subsequently reaches the DupThresh value, the bytes of the TSN
+            shall be subtracted from the flightsize. Once acknowledged the
+            remaining contribution of this TSN in the flightsize (whether it
             be there counted once or twice at this point in time) is
             subtracted. A TSN which is retransmitted in this manner will be
             marked as ineligible for a subsequent fast retransmit.</t>
@@ -479,7 +617,9 @@
         Operation.</t>
       </section>
 
-      <section title="SCTP-TLR Description">
+
+      <section anchor="SCTP_TLR"
+       title="SCTP-TLR Description">
         <t/>
 
         <section title="Principles">
@@ -754,21 +894,33 @@
           <t>At present the solution in this document operates with the
           algorithm defined for this purpose in <xref target="DUKKIPATI01"/>
           with a slight adjustment to SCTP to rely on the D-SACK (duplicate
-          TSN received) information available from SCTP SACK. The solution operates with a conceptual TLPP Retransmission Episode. As follows: </t>
+          TSN received) information available from SCTP SACK. The solution
+          operates with a conceptual TLPP Retransmission Episode. As
+          follows:</t>
 
           <t><list style="symbols">
               <t>Once a TLPP packet consisting of retransmission data is sent
               a TLPP Retransmission Episode is started. The TLPP
               Retransmission Episode is over when an incoming SACK
               cumulatively acknowledges a sequence number higher than the
-              sequence number of the TLPP probe with retransmission data. </t>
+              sequence number of the TLPP probe with retransmission data.</t>
 
-              <t>CWND halving is done at the termination of a TLPP Retransmisssion Episode if at this time in stage the number of times the TLPP TSN has been received, acccording to the D-SACK information communicated, is lower than the number of times the TLPP TSN has been sent.</t>
+              <t>CWND halving is done at the termination of a TLPP
+              Retransmisssion Episode if at this time in stage the number of
+              times the TLPP TSN has been received, acccording to the D-SACK
+              information communicated, is lower than the number of times the
+              TLPP TSN has been sent.</t>
 
-              <t>A TLPP Retransmission Episode is abruptly terminated if Fast Recovery or T3-Recovery is entered. </t>
+              <t>A TLPP Retransmission Episode is abruptly terminated if Fast
+              Recovery or T3-Recovery is entered.</t>
             </list></t>
 
-<t> OPEN ISSUE: The above solution is vulnerable to spurious CWND halving when a TLPP packet is re-ordered compared to a subsequent new data chunk sent. A possibly solution, contemplated for a number of reasons for SCTP, is to extend SCTP to distinguish retransmitted chunks from original chunks. </t>
+          <t>OPEN ISSUE: The above solution is vulnerable to spurious CWND
+          halving when a TLPP packet is re-ordered compared to a subsequent
+          new data chunk sent. A possibly solution, contemplated for a number
+          of reasons for SCTP, is to extend SCTP to distinguish retransmitted
+          chunks from original chunks.</t>
+
           <t/>
         </section>
       </section>
@@ -825,7 +977,7 @@
 
       <?rfc include="reference.RFC.5062"?>
 
-      <?rfc include="reference.RFC.6675" ?>
+      <?rfc include="reference.RFC.7053"?>
     </references>
 
     <references title="Informative References">
@@ -833,7 +985,10 @@
 
       <?rfc include="reference.RFC.5827"?>
 
+      
       <?rfc include="reference.RFC.5681"?>
+
+      <?rfc include="reference.RFC.6675" ?>
 
       <reference anchor="DUKKIPATI01" target="">
         <front>
@@ -907,16 +1062,79 @@
       <reference anchor="HURTIG" target="">
         <front>
           <title>TCP and SCTP RTO Restart,
-          draft-ietf-tcpm-rtorestart-03</title>
+          draft-ietf-tcpm-rtorestart-08</title>
 
           <author fullname="" initials="P." surname="Hurtig et al.">
             <organization/>
           </author>
 
-          <date month="7" year="2014"/>
+          <date month="3" year="2015"/>
         </front>
 
         <seriesInfo name="IETF Work In Progress" value=""/>
+      </reference>
+
+<reference anchor="zimmermann01" target="">
+        <front>
+          <title>CUBIC for Fast Long-Distance Networks,
+          draft-ietf-tcpm-cubic-00</title>
+
+          <author fullname="" initials="A." surname="Zimmermann">
+            <organization/>
+          </author>
+
+          <date month="6" year="2015"/>
+        </front>
+
+        <seriesInfo name="IETF Work In Progress" value=""/>
+      </reference>
+
+
+<reference anchor="zimmermann02" target="">
+        <front>
+          <title> The TCP Echo and TCP Echo Reply Option, draft-zimmermann-tcpm-echo-option-00
+          </title>
+
+          <author fullname="" initials="A." surname="Zimmermann">
+            <organization/>
+          </author>
+
+          <date month="6" year="2015"/>
+        </front>
+
+        <seriesInfo name="IETF Work In Progress" value=""/>
+      </reference>
+
+<reference anchor="zimmermann03" target="">
+        <front>
+          <title>Using the TCP Echo Option for Spurious Retransmission Detection,
+                draft-zimmermann-tcpm-spurious-rxmit-00</title>
+
+          <author fullname="" initials="A." surname="Zimmermann">
+            <organization/>
+          </author>
+
+          <date month="7" year="2015"/>
+        </front>
+
+        <seriesInfo name="IETF Work In Progress" value=""/>
+      </reference>
+
+
+      <reference anchor="Rajiullah" target="">
+        <front>
+          <title>An Evaluation of Tail Loss Recovery Mechanisms for
+          TCP</title>
+
+          <author fullname="" initials="M." surname=" Rajiullah et al.">
+            <organization/>
+          </author>
+
+          <date month="1" year="2015"/>
+        </front>
+
+        <seriesInfo name="ACM SIGCOMM Computer Communication Review"
+                    value="45,1"/>
       </reference>
     </references>
   </back>
